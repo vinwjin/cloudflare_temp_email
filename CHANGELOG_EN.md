@@ -18,6 +18,7 @@
 
 ### Bug Fixes
 
+- fix: |Worker| Fix `/health_check` being intercepted by the frontend assets fallback after enabling Worker assets, which returned HTML instead of `OK`
 - fix: |Admin| Hash address passwords in the frontend before admin reset requests, and make the backend accept and store only the hash instead of plaintext
 - fix: |Address| Stop returning stored address password hashes from the admin address list and user bound-address list APIs to avoid exposing sensitive fields
 - fix: |Address| Normalize whitespace and casing for configured domains, inbound recipient domains, and prefixes across `DOMAINS`, `DEFAULT_DOMAINS`, `USER_ROLES.domains`, random subdomains, forwarding rules, SMTP, and `SEND_MAIL` domain matching, preserve blank-domain catch-all forwarding rules, and clarify that empty `DEFAULT_DOMAINS` / role domains fall back to `DOMAINS`, to avoid create, receive, forward, or send failures caused by mixed-case configuration or inbound recipient domains (issue #926)
@@ -26,6 +27,8 @@
 - fix: |Frontend| Prevent iOS Safari from auto-zooming the page when focusing mobile form controls with small font sizes
 
 ### Improvements
+
+- ci: |Actions| Let the backend deployment workflow automatically deploy the Worker and frontend assets on pushes to `main`
 
 ## v1.8.0
 

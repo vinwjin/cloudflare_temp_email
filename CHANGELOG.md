@@ -18,6 +18,7 @@
 
 ### Bug Fixes
 
+- fix: |Worker| 修复启用 Worker assets 后 `/health_check` 被前端静态资源兜底拦截，导致健康检查返回 HTML 而不是 `OK` 的问题
 - fix: |Admin| 管理员重置邮箱地址密码时改为前端 SHA-256 后提交，后端只接受并存储哈希值，避免该接口继续接收明文密码
 - fix: |Address| 管理员邮箱地址列表与用户绑定地址列表不再返回已存储的地址密码哈希值，避免列表接口暴露敏感字段
 - fix: |Address| 统一规范化配置域名、收件地址域名与前缀的空白和大小写，覆盖 `DOMAINS`、`DEFAULT_DOMAINS`、`USER_ROLES.domains`、随机子域名、转发规则、SMTP 与 `SEND_MAIL` 域名匹配，保留转发规则空域名 catch-all 行为，并明确空 `DEFAULT_DOMAINS` / 角色域名回退到 `DOMAINS` 的行为，避免大小写配置或入站收件域名导致创建、收件、转发或发信失败（issue #926）
@@ -26,6 +27,8 @@
 - fix: |Frontend| 修复 iOS Safari 点击输入框时因移动端表单控件字号过小导致页面自动放大的问题
 
 ### Improvements
+
+- ci: |Actions| 后端部署 workflow 支持推送到 `main` 时自动部署 Worker 与前端 assets
 
 ## v1.8.0
 
