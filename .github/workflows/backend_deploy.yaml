@@ -83,3 +83,88 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           # ✅ 将 secret 映射到环境变量中
           WRANGLER_TOML_CONTENT: ${{ secrets.BACKEND_TOML }}
+
+      - name: Ensure wildcard MX for random subdomains
+        run: |
+          cd worker/
+          printf '%s\n' "$WRANGLER_TOML_CONTENT" > wrangler.toml
+          node <<'NODE'
+          const fs = require('node:fs');
+
+          const token = process.env.CLOUDFLARE_API_TOKEN;
+          if (!token) {
+            throw new Error('CLOUDFLARE_API_TOKEN is required');
+          }
+
+          const toml = fs.readFileSync('wrangler.toml', 'utf8');
+          const match = toml.match(/^\s*RANDOM_SUBDOMAIN_DOMAINS\s*=\s*\[(.*)\]\s*$/m);
+          if (!match) {
+            console.log('No RANDOM_SUBDOMAIN_DOMAINS configured; skip wildcard MX setup.');
+            process.exit(0);
+          }
+
+          const domains = [...match[1].matchAll(/"([^"]+)"/g)]
+            .map((item) => item[1].trim().toLowerCase())
+            .filter(Boolean);
+          if (domains.length === 0) {
+            console.log('RANDOM_SUBDOMAIN_DOMAINS is empty; skip wildcard MX setup.');
+            process.exit(0);
+          }
+
+          const mxRecords = [
+            { content: 'route2.mx.cloudflare.net', priority: 5 },
+            { content: 'route1.mx.cloudflare.net', priority: 30 },
+            { content: 'route3.mx.cloudflare.net', priority: 46 },
+          ];
+
+          async function cf(path, init = {}) {
+            const response = await fetch(`https://api.cloudflare.com/client/v4${path}`, {
+              ...init,
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json',
+                ...(init.headers || {}),
+              },
+            });
+            const data = await response.json();
+            if (!response.ok || !data.success) {
+              throw new Error(JSON.stringify(data.errors || data, null, 2));
+            }
+            return data.result;
+          }
+
+          for (const domain of domains) {
+            const zones = await cf(`/zones?name=${encodeURIComponent(domain)}`);
+            const zone = zones[0];
+            if (!zone) {
+              throw new Error(`Zone not found for ${domain}`);
+            }
+
+            const wildcardName = `*.${domain}`;
+            const existing = await cf(`/zones/${zone.id}/dns_records?type=MX&name=${encodeURIComponent(wildcardName)}`);
+            for (const record of mxRecords) {
+              const alreadyExists = existing.some((item) =>
+                item.content.replace(/\.$/, '') === record.content && item.priority === record.priority
+              );
+              if (alreadyExists) {
+                console.log(`Skip existing MX ${wildcardName} -> ${record.content} (${record.priority})`);
+                continue;
+              }
+              await cf(`/zones/${zone.id}/dns_records`, {
+                method: 'POST',
+                body: JSON.stringify({
+                  type: 'MX',
+                  name: wildcardName,
+                  content: record.content,
+                  priority: record.priority,
+                  ttl: 1,
+                  proxied: false,
+                }),
+              });
+              console.log(`Created MX ${wildcardName} -> ${record.content} (${record.priority})`);
+            }
+          }
+          NODE
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          WRANGLER_TOML_CONTENT: ${{ secrets.BACKEND_TOML }}

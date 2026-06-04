@@ -29,6 +29,7 @@
 ### Improvements
 
 - ci: |Actions| 后端部署 workflow 支持推送到 `main` 时自动部署 Worker 与前端 assets
+- ci: |Actions| 后端部署 workflow 在启用 `RANDOM_SUBDOMAIN_DOMAINS` 时自动补齐随机子域名收信所需的通配 MX 记录
 
 ## v1.8.0
 

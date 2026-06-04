@@ -29,6 +29,7 @@
 ### Improvements
 
 - ci: |Actions| Let the backend deployment workflow automatically deploy the Worker and frontend assets on pushes to `main`
+- ci: |Actions| Let the backend deployment workflow automatically ensure wildcard MX records when `RANDOM_SUBDOMAIN_DOMAINS` is enabled
 
 ## v1.8.0
 
