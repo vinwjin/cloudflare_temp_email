@@ -141,9 +141,13 @@ jobs:
                 throw new Error(`Zone not found for ${domain}`);
               }
 
-              const wildcardName = `*.${domain}`;
-              const existing = await cf(`/zones/${zone.id}/dns_records?type=MX&name=${encodeURIComponent(wildcardName)}`);
-              for (const record of mxRecords) {
+            const wildcardName = `*.${domain}`;
+            const existing = await cf(`/zones/${zone.id}/dns_records?type=MX&name=${encodeURIComponent(wildcardName)}`);
+            const wildcardRecords = await cf(`/zones/${zone.id}/dns_records?name=${encodeURIComponent(wildcardName)}`);
+            for (const item of wildcardRecords) {
+              console.log(`Current DNS ${item.name} ${item.type} ${item.content} ${item.priority ?? ''}`);
+            }
+            for (const record of mxRecords) {
                 const alreadyExists = existing.some((item) =>
                   item.content.replace(/\.$/, '') === record.content && item.priority === record.priority
                 );
