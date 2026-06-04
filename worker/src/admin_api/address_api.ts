@@ -3,7 +3,7 @@ import { Jwt } from 'hono/utils/jwt'
 
 import i18n from '../i18n'
 import { getBooleanValue } from '../utils'
-import { newAddress, handleListQuery } from '../common'
+import { newAddress, handleListQuery, generateRandomName } from '../common'
 
 const listAddresses = async (c: Context<HonoCustomType>) => {
     const { limit, offset, query, sort_by, sort_order } = c.req.query();
@@ -46,16 +46,20 @@ const listAddresses = async (c: Context<HonoCustomType>) => {
 };
 
 const createNewAddress = async (c: Context<HonoCustomType>) => {
-    const { name, domain, enablePrefix, enableRandomSubdomain } = await c.req.json();
+    const { name: requestName, domain, enablePrefix, enableRandomSubdomain } = await c.req.json();
+    let name = requestName;
     const msgs = i18n.getMessagesbyContext(c);
-    if (!name) {
+    if (!name && !getBooleanValue(c.env.DISABLE_CUSTOM_ADDRESS_NAME)) {
         return c.text(msgs.RequiredFieldMsg, 400)
+    }
+    if (!name || getBooleanValue(c.env.DISABLE_CUSTOM_ADDRESS_NAME)) {
+        name = generateRandomName(c);
     }
     try {
         const res = await newAddress(c, {
             name, domain, enablePrefix,
             enableRandomSubdomain: getBooleanValue(enableRandomSubdomain),
-            checkLengthByConfig: false,
+            checkLengthByConfig: true,
             addressPrefix: null,
             checkAllowDomains: false,
             enableCheckNameRegex: false,
