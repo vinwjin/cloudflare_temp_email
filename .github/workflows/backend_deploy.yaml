@@ -133,37 +133,44 @@ jobs:
             return data.result;
           }
 
-          for (const domain of domains) {
-            const zones = await cf(`/zones?name=${encodeURIComponent(domain)}`);
-            const zone = zones[0];
-            if (!zone) {
-              throw new Error(`Zone not found for ${domain}`);
-            }
-
-            const wildcardName = `*.${domain}`;
-            const existing = await cf(`/zones/${zone.id}/dns_records?type=MX&name=${encodeURIComponent(wildcardName)}`);
-            for (const record of mxRecords) {
-              const alreadyExists = existing.some((item) =>
-                item.content.replace(/\.$/, '') === record.content && item.priority === record.priority
-              );
-              if (alreadyExists) {
-                console.log(`Skip existing MX ${wildcardName} -> ${record.content} (${record.priority})`);
-                continue;
+          async function main() {
+            for (const domain of domains) {
+              const zones = await cf(`/zones?name=${encodeURIComponent(domain)}`);
+              const zone = zones[0];
+              if (!zone) {
+                throw new Error(`Zone not found for ${domain}`);
               }
-              await cf(`/zones/${zone.id}/dns_records`, {
-                method: 'POST',
-                body: JSON.stringify({
-                  type: 'MX',
-                  name: wildcardName,
-                  content: record.content,
-                  priority: record.priority,
-                  ttl: 1,
-                  proxied: false,
-                }),
-              });
-              console.log(`Created MX ${wildcardName} -> ${record.content} (${record.priority})`);
+
+              const wildcardName = `*.${domain}`;
+              const existing = await cf(`/zones/${zone.id}/dns_records?type=MX&name=${encodeURIComponent(wildcardName)}`);
+              for (const record of mxRecords) {
+                const alreadyExists = existing.some((item) =>
+                  item.content.replace(/\.$/, '') === record.content && item.priority === record.priority
+                );
+                if (alreadyExists) {
+                  console.log(`Skip existing MX ${wildcardName} -> ${record.content} (${record.priority})`);
+                  continue;
+                }
+                await cf(`/zones/${zone.id}/dns_records`, {
+                  method: 'POST',
+                  body: JSON.stringify({
+                    type: 'MX',
+                    name: wildcardName,
+                    content: record.content,
+                    priority: record.priority,
+                    ttl: 1,
+                    proxied: false,
+                  }),
+                });
+                console.log(`Created MX ${wildcardName} -> ${record.content} (${record.priority})`);
+              }
             }
           }
+
+          main().catch((error) => {
+            console.error(error);
+            process.exit(1);
+          });
           NODE
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
